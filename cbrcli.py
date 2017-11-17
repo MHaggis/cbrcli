@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 VERSION = 'cbrcli version 1.5.0 (Promethium Blue)'
-print VERSION
+print(VERSION)
 import os
 import sys
 import platform
@@ -25,10 +25,8 @@ from prompt_toolkit.contrib.completers import WordCompleter, PathCompleter
 from threading import Thread
 
 import urllib3
+import imp
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 modes = {
     'binary': {
@@ -219,7 +217,7 @@ except IOError:
         os.makedirs(config_dir)
     with open(os.sep.join((config_dir, opt_file)), 'w') as f:
         json.dump(state['options'], f)
-    
+
 state['result'] = None
 is_windows = 'windows' in platform.system().lower()
 state['selected_mode'] = modes['process']
@@ -416,7 +414,7 @@ class QueryCompleter(Completer):
                 for field in commands:
                     if field.lower().startswith(params[0].lower()):
                         yield Completion(field, start_position=-len(params[0]))
-            
+
 class QuerySuggester(AutoSuggest):
     def get_suggestion(self, cli, buffer, document):
         split = document.current_line.split(' ')
@@ -454,7 +452,7 @@ def parse_user_timeframe(timeframe):
         except ValueError:
             start_index += 1
     if not number or number < 0 or len(fields) < start_index+2 or fields[start_index+1] not in ('days', 'hours', 'minutes', 'weeks'):
-        print "Warning: You've set a goofy timeframe. I'm going to go ahead and use the last 30 days instead."
+        print("Warning: You've set a goofy timeframe. I'm going to go ahead and use the last 30 days instead.")
         timeframe = 'last 30 days'
     number, period = re.search('([0-9]+) ([^ ]+)', timeframe.lower()).groups()
     return datetime.utcnow() - timedelta(**{period:int(number)})
@@ -467,7 +465,7 @@ def do_search(qry):
         try:
             qry_result = qry_result.where(qry)
         except ValueError:
-            print ''.join((state['color_scheme'].RED, "Invalid query", state['color_scheme'].ENDC))
+            print((''.join((state['color_scheme'].RED, "Invalid query", state['color_scheme'].ENDC))))
             qry = ''
     timeframe = parse_user_timeframe(state['options']['timeframe']['value'])
     if state['selected_mode']['name'] == 'process' and hasattr(qry_result, 'min_last_update'):
@@ -492,7 +490,7 @@ def get_fields(result, state, expand_tabs=False):
             except re.error:
                 rf = (split[0], None)
         else:
-            rf = (f, None) 
+            rf = (f, None)
         regex_fields.append(rf)
     try:
         for total_searched, r in enumerate(result):
@@ -523,7 +521,7 @@ def get_fields(result, state, expand_tabs=False):
                 if type(attr) == str:
                     fieldlist.append(attr.encode("utf-8", errors="ignore").replace('\n', ' '))
                 else:
-                    fieldlist.append(unicode(attr))
+                    fieldlist.append(str(attr))
             if len(state['records']) > state['history_limit']:
                 state['records'][len(state['records']) - state['history_limit']] = None
             if ignore_duplicates:
@@ -535,7 +533,7 @@ def get_fields(result, state, expand_tabs=False):
             yield index, fieldlist
             index += 1
     except ServerError as e:
-        print "%sCarbon Black server returned an error. Check the server error logs for more information%s" % (state['color_scheme'].RED, state['color_scheme'].ENDC)
+        print(("%sCarbon Black server returned an error. Check the server error logs for more information%s" % (state['color_scheme'].RED, state['color_scheme'].ENDC)))
 
 def save_results(filename, result, state, canary):
         total_results = len(result)
@@ -548,9 +546,9 @@ def save_results(filename, result, state, canary):
                     return
                 state['status_text'] = 'Saving to %s (%d%%)' % (filename, int(float(state.get('search_progress', 0)) / total_results * 100))
                 try:
-                    out.write(unicode('\t'.join(fieldlist)).decode("utf-8", errors="ignore") + u'\n')
+                    out.write(str('\t'.join(fieldlist)).decode("utf-8", errors="ignore") + '\n')
                 except UnicodeDecodeError:
-                    print fieldlist
+                    print(fieldlist)
             state['status_text'] = '[COMPLETE]'
 
 def save_fieldsets(fieldsets):
@@ -561,7 +559,7 @@ def print_rows(index, num_indent, rows, term_width=None):
     width = get_terminal_width()
     if state['options']['show_column_headers']['value'] and index == 1:
         rows = [state['fieldsets'][state['selected_mode']['name']]['current']] + rows
-    paddings = [len(max((field[i] for field in rows), key=len)) for i in xrange(len(rows[0]))]
+    paddings = [len(max((field[i] for field in rows), key=len)) for i in range(len(rows[0]))]
     if state['options']['show_column_headers']['value'] and index == 1:
         del(rows[0])
         if state['options']['align_columns']['value']:
@@ -569,13 +567,13 @@ def print_rows(index, num_indent, rows, term_width=None):
         else:
             header_row = '  '.join(state['fieldsets'][state['selected_mode']['name']]['current'])
         header_row = ' ' * (num_indent + 1) + header_row
-        print '%s%s%s' % (state['color_scheme'].GREEN, header_row[:width if state['options']['align_columns']['value'] else len(header_row)], state['color_scheme'].ENDC)
+        print(('%s%s%s' % (state['color_scheme'].GREEN, header_row[:width if state['options']['align_columns']['value'] else len(header_row)], state['color_scheme'].ENDC)))
     for line_offset, fields in enumerate(rows):
         row_num_output = state['color_scheme'].BLUE + (' ' * (num_indent - len(str(index + line_offset)))) + str(index + line_offset) + state['color_scheme'].ENDC + ' '
         field_output = '  '.join([field + (' ' * (paddings[i] - len(field))) for i, field in enumerate(fields)])
         if not state['options']['wrap_output']['value']:
             field_output = field_output[:width-num_indent-2]
-        print row_num_output + field_output
+        print((row_num_output + field_output))
 
 def result_pager(result, state):
     counter = 0
@@ -606,13 +604,13 @@ def print_facet_histogram(facets):
     fields = []
     state['facet_suggestions'] = []
     for entry in facets:
-        fields.append((entry["name"], entry["ratio"], u"\u25A0"*(int(entry["percent"])/2)))
+        fields.append((entry["name"], entry["ratio"], "\\u25A0"*(int(entry["percent"])/2)))
     if fields:
         max_fieldsize = max((len(i[0]) for i in fields))
     for f in fields:
         state['facet_suggestions'].append(f[0])
         line = "%*s: %5s%% %s%s%s" % (max_fieldsize, f[0], f[1], state['color_scheme'].GREEN, f[2], state['color_scheme'].ENDC)
-        print line 
+        print(line)
 
 def parse_opt(t, s):
     if t == 'bool':
@@ -669,7 +667,7 @@ class cbcli_cmd:
             state['result'] = None
             state['status_text'] = '[READY]'
         else:
-            print "Please specify a mode from " + str([i for i in modes])
+            print(("Please specify a mode from " + str([i for i in modes])))
     @staticmethod
     def _search(cmd, params, state):
         state['facet_suggestions'] = []
@@ -706,7 +704,7 @@ class cbcli_cmd:
            return "You haven't made a query yet."
        state['result_pager'] = result_pager(state['result'], state)
        try:
-           state['result_pager'].next()
+           next(state['result_pager'])
        except StopIteration:
            pass
     @staticmethod
@@ -714,7 +712,7 @@ class cbcli_cmd:
         if not state.get('result_pager'):
             return "No results"
         try:
-            state['result_pager'].next()
+            next(state['result_pager'])
         except StopIteration:
             return "<No more results>"
     @staticmethod
@@ -741,7 +739,7 @@ class cbcli_cmd:
             if f not in state['selected_mode']['fields']:
                 warn_fields.append(f)
         if warn_fields:
-            print '%s%s%s' % (state['color_scheme'].ORANGE, 'Possible invalid fields: ' + ', '.join(warn_fields), state['color_scheme'].ENDC)
+            print(('%s%s%s' % (state['color_scheme'].ORANGE, 'Possible invalid fields: ' + ', '.join(warn_fields), state['color_scheme'].ENDC)))
         state['fieldsets'][state['selected_mode']['name']]['current'] = params
         save_fieldsets(state['fieldsets'])
     @staticmethod
@@ -766,9 +764,9 @@ class cbcli_cmd:
         if not params:
             max_len = sorted([len(commands[i].split('\t')[0]) for i in commands])[-1]
             for key in sorted((i for i in commands)):
-                print commands[key].split('\t')[0] + ' ' * (max_len - len(commands[key].split('\t')[0])), ' ', commands[key].split('\t')[1]
+                print((commands[key].split('\t')[0] + ' ' * (max_len - len(commands[key].split('\t')[0])), ' ', commands[key].split('\t')[1]))
         else:
-            print commands[params[0]] 
+            print((commands[params[0]]))
     @staticmethod
     def _dfilter(cmd, params, state):
         if not params:
@@ -810,7 +808,7 @@ class cbcli_cmd:
         if len(params) == 1:
             try:
                 index = int(params[0])
-                print state.get('records', [])[index - 1] or "Record has expired"
+                print((state.get('records', [])[index - 1] or "Record has expired"))
             except ValueError:
                 return "Invalid id"
             except IndexError:
@@ -818,10 +816,10 @@ class cbcli_cmd:
         else:
             index = int(params[0])
             fields = [str(i) for i in params[1:]]
-            padding = max(map(len, fields))
+            padding = max(list(map(len, fields)))
             for field in fields:
                 try:
-                    print "%*s: %s" % (padding, field, str(getattr(state.get('records', [])[index - 1], field)))
+                    print(("%*s: %s" % (padding, field, str(getattr(state.get('records', [])[index - 1], field)))))
                 except ValueError:
                     return "Invalid id"
                 except IndexError:
@@ -833,7 +831,7 @@ class cbcli_cmd:
         if not params:
             max_opt_len = max((len(i) for i in state['options']))
             for opt in state['options']:
-                print '%*s: %s%s%s' % (max_opt_len, opt, state['color_scheme'].RED, str(state['options'][opt]['value']), state['color_scheme'].ENDC)
+                print(('%*s: %s%s%s' % (max_opt_len, opt, state['color_scheme'].RED, str(state['options'][opt]['value']), state['color_scheme'].ENDC)))
             return
         if not len(params) >= 2:
             return "Usage: <option> <value>"
@@ -843,7 +841,7 @@ class cbcli_cmd:
             from_user = parse_opt(state['options'][params[0]]['type'], ' '.join(params[1:]))
             state['options'][params[0]]['value'] = from_user
             prefs_updated(state)
-            print params[0] + ' => ' + str(state['options'][params[0]]['value'])
+            print((params[0] + ' => ' + str(state['options'][params[0]]['value'])))
         except ValueError:
             return "Invalid value, %s takes a %s" % (params[0], state['options'][params[0]]['type'])
         with open(os.sep.join((config_dir, opt_file)), 'w') as f:
@@ -869,7 +867,7 @@ class cbcli_cmd:
             qry = '(alliance_score_%s:*)' % feed.name.lower()
             qry, result = do_search(qry)
             result_count = len(result)
-            print "%*s: %s" % (width, feed.display_name, result_count)
+            print(("%*s: %s" % (width, feed.display_name, result_count)))
     @staticmethod
     def _sort(cmd, params, state):
         if not params:
@@ -912,7 +910,7 @@ class cbcli_cmd:
         try:
             records = [state.get('records', [])[int(params[0]) - 1]] if params else state.get('records', [])
             for mod in get_mods(records, 'netconns', format_netconn, color=True):
-                print mod
+                print(mod)
         except (ValueError, IndexError):
             return "Invalid id"
     @staticmethod
@@ -923,7 +921,7 @@ class cbcli_cmd:
         except (ValueError, IndexError):
             record_id = None
         if not params:
-            print "Please specify an output file"
+            print("Please specify an output file")
             return
         try:
             with open(params[0], 'w') as f:
@@ -937,7 +935,7 @@ class cbcli_cmd:
         try:
             records = [state.get('records', [])[int(params[0]) - 1]] if params else state.get('records', [])
             for mod in get_mods(records, 'crossprocs', formatter=format_crossproc, color=True):
-                 print mod
+                 print(mod)
         except (ValueError, IndexError):
             return "Invalid id"
     @staticmethod
@@ -948,7 +946,7 @@ class cbcli_cmd:
         except (ValueError, IndexError):
             record_id = None
         if not params:
-            print "Please specify an output file"
+            print("Please specify an output file")
             return
         try:
             with open(params[0], 'w') as f:
@@ -962,7 +960,7 @@ class cbcli_cmd:
         try:
             records = [state.get('records', [])[int(params[0]) - 1]] if params else state.get('records', [])
             for mod in get_mods(records, 'modloads', formatter=format_modload, color=True):
-                 print mod
+                 print(mod)
         except (ValueError, IndexError):
             return "Invalid id"
     @staticmethod
@@ -973,7 +971,7 @@ class cbcli_cmd:
         except (ValueError, IndexError):
             record_id = None
         if not params:
-            print "Please specify an output file"
+            print("Please specify an output file")
             return
         try:
             with open(params[0], 'w') as f:
@@ -987,7 +985,7 @@ class cbcli_cmd:
         try:
             records = [state.get('records', [])[int(params[0]) - 1]] if params else state.get('records', [])
             for mod in get_mods(records, 'regmods', formatter=format_regmod, color=True):
-                 print mod
+                 print(mod)
         except (ValueError, IndexError):
             return "Invalid id"
     @staticmethod
@@ -998,7 +996,7 @@ class cbcli_cmd:
         except (ValueError, IndexError):
             record_id = None
         if not params:
-            print "Please specify an output file"
+            print("Please specify an output file")
             return
         try:
             with open(params[0], 'w') as f:
@@ -1012,7 +1010,7 @@ class cbcli_cmd:
         try:
             records = [state.get('records', [])[int(params[0]) - 1]] if params else state.get('records', [])
             for mod in get_mods(records, 'filemods', formatter=format_filemod, color=True):
-                 print mod
+                 print(mod)
         except (ValueError, IndexError):
             return "Invalid id"
     @staticmethod
@@ -1023,7 +1021,7 @@ class cbcli_cmd:
         except (ValueError, IndexError):
             record_id = None
         if not params:
-            print "Please specify an output file"
+            print("Please specify an output file")
             return
         try:
             with open(params[0], 'w') as f:
@@ -1037,7 +1035,7 @@ class cbcli_cmd:
         try:
             records = [state.get('records', [])[int(params[0]) - 1]] if params else state.get('records', [])
             for mod in get_mods(records, 'children', formatter=format_children):
-                 print mod
+                 print(mod)
         except (ValueError, IndexError):
             return "Invalid id"
     @staticmethod
@@ -1045,7 +1043,7 @@ class cbcli_cmd:
         try:
             records = [state.get('records', [])[int(params[0]) - 1]] if params else state.get('records', [])
             for mod in get_mods(records, 'parents', formatter=format_parent):
-                 print mod
+                 print(mod)
         except (ValueError, IndexError):
             return "Invalid id"
     @staticmethod
@@ -1094,10 +1092,10 @@ class cbcli_cmd:
         state['running'] = False
     @staticmethod
     def _version(cmd, params, state):
-        print VERSION
+        print(VERSION)
     @staticmethod
     def _debug(cmd, params, state):
-        print dir(state.get('records', [])[int(params[0]) - 1])
+        print((dir(state.get('records', [])[int(params[0]) - 1])))
 
 def no_format(s, color=True):
     return s
@@ -1121,11 +1119,11 @@ if credentials.get('ignore_system_proxy'):
     os.environ['NO_PROXY'] = credentials.get('url').split('//')[1].split('/')[0]
 
 try:
-    print "Connecting to server using profile '%s'" % profile
+    print(("Connecting to server using profile '%s'" % profile))
     cb = CbResponseAPI(profile=profile)
 except CredentialError:
     if len(sys.argv) > 1:
-        print "Profile '%s' could not be found. Please check it exists in the Carbon Black config" % sys.argv[1]
+        print(("Profile '%s' could not be found. Please check it exists in the Carbon Black config" % sys.argv[1]))
     else:
         if not os.path.exists('.carbonblack'):
             os.makedirs('.carbonblack')
@@ -1136,10 +1134,10 @@ except CredentialError:
                 f.write("token=your_token\n")
                 f.write("ssl_verify=False\n")
                 f.write("ignore_system_proxy=True")
-        print "Please create a profile in .carbonblack/credentials.response. An example file is provided in this directory"
+        print("Please create a profile in .carbonblack/credentials.response. An example file is provided in this directory")
     sys.exit(1)
 except ApiError:
-    print "Unable to connect using profile '%s'." % profile
+    print(("Unable to connect using profile '%s'." % profile))
     sys.exit(1)
 
 state['feeds'] = [f for f in cb.select(Feed) if f.enabled]
@@ -1150,7 +1148,7 @@ while True:
     completer = QueryCompleter()
     suggester = QuerySuggester()
     try:
-        from_user = prompt(u'(%s)> ' % state['selected_mode']['name'] if state['selected_mode'] else '-', 
+        from_user = prompt('(%s)> ' % state['selected_mode']['name'] if state['selected_mode'] else '-',
                 completer=completer,
                 auto_suggest=suggester,
                 get_bottom_toolbar_tokens=get_bottom_toolbar_tokens,
@@ -1159,10 +1157,10 @@ while True:
                 style=prompt_style).strip()
     except EOFError:
         state['canary']['stop'] = True
-        print "Got ctrl+d, exiting..."
+        print("Got ctrl+d, exiting...")
         break
     except KeyboardInterrupt:
-        print '%s%s%s' % (state['color_scheme'].ORANGE, "Caught ctrl+c. Use 'exit' or ctrl+d to quit", state['color_scheme'].ENDC)
+        print(('%s%s%s' % (state['color_scheme'].ORANGE, "Caught ctrl+c. Use 'exit' or ctrl+d to quit", state['color_scheme'].ENDC)))
         continue
     cmd = from_user.split(' ')[0]
     params = from_user.split(' ')[1:]
@@ -1176,6 +1174,6 @@ while True:
     try:
         out = getattr(cbcli_cmd, '_' + cmd.replace('-', '_'), cbcli_cmd._invalid_cmd)(cmd=cmd, params=params, state=state)
     except ApiError:
-        print ''.join((state['color_scheme'].RED, "Query timed out", state['color_scheme'].ENDC))
+        print((''.join((state['color_scheme'].RED, "Query timed out", state['color_scheme'].ENDC))))
     if out:
-        print ''.join((state['color_scheme'].RED, out, state['color_scheme'].ENDC))
+        print((''.join((state['color_scheme'].RED, out, state['color_scheme'].ENDC))))
